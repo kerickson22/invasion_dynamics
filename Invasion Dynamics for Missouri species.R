@@ -117,7 +117,8 @@ for(i in 1:frames){
 }
 
 #Use the purr and magick packages to combine the png files into a GIF
-
+# This part of the code comes from a post by Ryan Peek on how to make GIF 
+# files in R: https://ryanpeek.github.io/2016-10-19-animated-gif_maps_in_R/ 
 list.files(path = "./", pattern = "*.png", full.names = T) %>% 
   map(image_read) %>% # reads each path file
   image_join() %>% # joins image
