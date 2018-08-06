@@ -16,10 +16,11 @@ speciesList<-c("Elaeagnus umbellata", "Lonicera maackii", "Pyrus calleryana", "R
 E_umbellata <- occ_search(scientificName = "Elaeagnus umbellata", return =  "data", limit=20000)
 gbifmap(E_umbellata)
 save(E_umbellata, file='00 Original data downloaded from GBIF.rData')
+#There are 7037 observations of 160 variables. 
 
 
 E_umbellata<- data.frame( 
-  idNum <- E_umbellata$gbifID,
+  idNum = E_umbellata$gbifID,
   rawSpecies=E_umbellata$scientificName,
   longitude=E_umbellata$decimalLongitude,
   latitude=E_umbellata$decimalLatitude,
@@ -34,19 +35,63 @@ E_umbellata<- data.frame(
   institution=E_umbellata$institutionCode,
   identifiedBy=E_umbellata$identifiedBy
 )
-
+#Now there are 7037 observations of 14 variables. 
 save(E_umbellata,  file='01 Saved as dataframe.rData')
 
+
 #Remove observations that are missing coordinates 
+E_umbellata_missingCoords<-E_umbellata[is.na(E_umbellata$longitude), ]
+#There are 3860 observations that are missing coordinates (over half!)
+save(E_umbellata_missingCoords, file='02b Observations missing coordinates.rData')
+summary(E_umbellata_missingCoords$country)
+# Of these 3860 observations that are missing coordinates, 902 have no country 'none'
+# 244 records are listed as US
+summary(E_umbellata_missingCoords$state)
+# 21 recrods from Massachusetts
+# 21 records from South Carolina
+# 15 records from New York
+# 13 records from Michigan
+# 13 records from Missouri
+# 12 records from Florida
+# 11 records from North Carolina
+# 9 records from Hawaii 
+# 6 records from Virginia 
+# 5 records from Georgia 
+# 5 records from Oregon
+# 4 records from Connecticut
+# 4 records from New Hampshire
+# 4 records from Pennsylvania
+# 3 records from Louisiana
+# 3 records from Maine
+# 3 records from Rhode Island
+# # 3 records from Wisconsin
+# and 95 records from (Other)
+
+summary(E_umbellata_missingCoords$county)
+
+
+
+
+
+
 E_umbellata<-E_umbellata[!is.na(E_umbellata$longitude), ]
 save(E_umbellata, file='02 Remove missing coordinates.rData')
 
 #Remove observations without a year
+E_umbellata_coordsMissingYear<-E_umbellata[is.na(E_umbellata$year), ]
+#There are 218 observations that have coordinates but are missing a year 
+save(E_umbellata_coordsMissingYear, file = '03b Observations with coordinates missing year.rData')
+
+
 E_umbellata<- E_umbellata[!is.na(E_umbellata$year), ]
 save(E_umbellata, file='03 Remove data points that are missing year.rData')
 
 #Remove observations that are not in the US
 #Is this step removing valid points?
+E_umbellata_missingCountry<-E_umbellata[is.na(E_umbellata$country), ]
+#There are no observations that lack a country 
+
+
 E_umbellata <- E_umbellata[E_umbellata$country=="US", ]
 save(E_umbellata, file='04 Remove data points not in US.rData')
 
