@@ -46,3 +46,6 @@ rsconnect/
 *.txt
 *.dbf
 04b Records that have coords and year but are missing country code
+*.bil
+*.hdr
+*.zip
