@@ -9,7 +9,7 @@ library(bayesLopod)
 library(calibrate)
 library(scrubr)
 
-setwd("H:/Global Change Program/Research/Occupancy Modeling of Messy Detections/Kelley Erickson/Schinus spread/Code")
+setwd("C:/Users/kerickson/Documents/GitHub/invasion_dynamics")
 load(".RData")
 
 anacards_FL_XY <- anacards_FL[!is.na(anacards_FL$decimalLongitude), ]
@@ -64,3 +64,8 @@ spplot( raster::stack(psiRaster,ppRaster),
 
 getCRS("albersNA")
 thing <- sp::spTransform(florida, getCRS("albersNA", TRUE))
+
+
+#Read in records of all Tracheophytes in Florida from GBIF: 
+tracheophyta <-read.delim("./Tracheophyta/occurrence.txt")
+tracheophyta_XY <- SpatialPoints(cbind(tracheophyta$decimalLongitude, tracheophyta$decimalLatitude), getCRS('wgs84', TRUE))
