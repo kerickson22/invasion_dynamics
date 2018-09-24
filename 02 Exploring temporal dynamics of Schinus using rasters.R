@@ -112,3 +112,78 @@ for (i in 1:nrow(TracheoInFlorida)) {
   florida@data$numTracheo[thisRow] <- florida@data$numTracheo[thisRow] + 1
   
 }
+
+
+### count number of records WITHOUT coordinates in each county
+#############################################################
+
+# clean records
+noCoord_tracheo <- tracheophyta2[is.na(tracheophyta2$decimalLongitude) & is.na(tracheophyta2$decimalLatitude) & tracheophyta2$hasGeospatialIssues=='false' & !is.na(tracheophyta2$county) & !is.na(tracheophyta2$stateProvince), ]
+
+
+#All of the records missing coordinates are also missing county names.... 
+#so looping through and adding counties does not help 
+
+
+ld_Shape_tracheo = shapeLopodData( Shapefile = florida,
+                           fieldN = "numTracheo",
+                           fieldY = "numSchinus",  
+                           Adjacency = T,
+                           keepFields = F)
+
+schinusSEff_Tracheo = spplot(florida, zcol = c("numTracheo"), main = "Sampling Effort", border=NA)
+schinusDetect = spplot(florida, zcol = c("numSchinus"), main = "Detections", border=NA)
+plot(schinusSEff_Tracheo, split = c(1,1,2,1), more = T, border=NA)
+plot(schinusDetect,  split = c(2,1,2,1), more = F, border=NA)
+
+
+mLopodShape_tracheo = modelLopod(LopodData = ld_Shape_tracheo,
+                         varP = T,
+                         q = NULL,
+                         pmin = 0,
+                         CAR = T,
+                         nChains = 3,
+                         warmup = 500,
+                         sampling = 1000,
+                         nCores =3)
+
+lopodTrace( mLopodShape_tracheo, inc_warmup = T)
+
+
+lopodDens(mLopodShape_tracheo, c("q", "pmin", "pmax"))
+
+SchinusShape = mLopodShape_tracheo@LopodData@geoDataObject
+
+psiShape = lopodShape(mLopodShape_tracheo, "psi_i", extrapolate = T,  quant = 0.05)
+SchinusShape@data[,"psi_05"] = psiShape@data[,"psi_i"]
+
+psiShape = lopodShape(mLopodShape_tracheo, "psi_i", extrapolate = T,  quant = 0.5)
+SchinusShape@data[,"psi_50"] = psiShape@data[,"psi_i"]
+
+psiShape = lopodShape(mLopodShape_tracheo, "psi_i", extrapolate = T,  quant = 0.95)
+SchinusShape@data[,"psi_95"] = psiShape@data[,"psi_i"]
+
+
+spplot( SchinusShape,
+        zcol = c("psi_05", "psi_50", "psi_95"),
+        names.attr = c("Psi (5% quantile)", "Psi (median)", "Psi (95% quantile)"), main = "Occupancy (Psi)")
+
+#Question: How does the plot of occupancy look different when using the Tracheophytes as the background instead 
+# of just the Anacardiacea? 
+
+SchinusShape2 = mLopodShape@LopodData@geoDataObject
+
+psiShape = lopodShape(mLopodShape, "psi_i", extrapolate = T,  quant = 0.05)
+SchinusShape2@data[,"psi_05"] = psiShape@data[,"psi_i"]
+
+psiShape = lopodShape(mLopodShape, "psi_i", extrapolate = T,  quant = 0.5)
+SchinusShape2@data[,"psi_50"] = psiShape@data[,"psi_i"]
+
+psiShape = lopodShape(mLopodShape, "psi_i", extrapolate = T,  quant = 0.95)
+SchinusShape2@data[,"psi_95"] = psiShape@data[,"psi_i"]
+
+
+spplot( SchinusShape2,
+        zcol = c("psi_05", "psi_50", "psi_95"),
+        names.attr = c("Psi (5% quantile)", "Psi (median)", "Psi (95% quantile)"), main = "Occupancy (Psi)")
+
