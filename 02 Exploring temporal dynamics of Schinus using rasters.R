@@ -12,6 +12,9 @@ library(scrubr)
 setwd("C:/Users/kerickson/Documents/GitHub/invasion_dynamics")
 load(".RData")
 
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+
 anacards_FL_XY <- anacards_FL[!is.na(anacards_FL$decimalLongitude), ]
 anacards_FL_XY <- anacards_FL_XY[!is.na(anacards_FL_XY$decimalLatitude), ]
 anacards_FL_XY <- anacards_FL_XY[anacards_FL_XY$decimalLongitude < -75, ]
