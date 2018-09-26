@@ -487,10 +487,10 @@ mLopodShape_1970 = modelLopod(LopodData = ld_Shape_1970,
                               q = NULL, 
                               pmin = 0,
                               CAR = T, 
-                              nChains = 3, 
+                              nChains = 4, 
                               warmup = 500, 
                               sampling = 1000, 
-                              nCores =3)
+                              nCores =4)
 lopodTrace(mLopodShape_1970, inc_warmup=T)
 
 mLopodShape_1980 = modelLopod(LopodData = ld_Shape_1980,
@@ -632,6 +632,9 @@ psiShape_2020 = lopodShape(mLopodShape_2020, "psi_i", extrapolate = T,  quant = 
 SchinusShape_2020@data[,"psi_05"] = psiShape_2020@data[,"psi_i"]
 psiShape_2020 = lopodShape(mLopodShape_2020, "psi_i", extrapolate = T,  quant = 0.5)
 SchinusShape_2020@data[,"psi_50"] = psiShape_2020@data[,"psi_i"]
+
+
+lopodDens(mLopodShape_1970, c("q", "pmin", "pmax"))
 psiShape_2020 = lopodShape(mLopodShape_2020, "psi_i", extrapolate = T,  quant = 0.95)
 SchinusShape_2020@data[,"psi_95"] = psiShape_2020@data[,"psi_i"]
 spplot( SchinusShape_2020,
