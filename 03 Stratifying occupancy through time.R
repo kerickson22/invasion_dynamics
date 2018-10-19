@@ -11,9 +11,11 @@ library(scrubr)
 library(plyr)
 library(purrr)
 library(magick)
+library(classInt)
+library(gridExtra)
 
 setwd("C:/Users/kerickson/Documents/GitHub/invasion_dynamics")
-load(".RData")
+#load(".RData")
 
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
@@ -29,42 +31,86 @@ schinus <- read.csv("./Schinus records from GBIF/schinus_records.csv", header=T)
 tracheophyta<- read.csv("./Tracheophyta/occurrence2.csv", header=T)
 #There are 383,697 Florida records with coordinates of Tracheophytes 
 
+
+#To be useful, each of the records has to have a year associated with it
+anacardeaceae <- subset(anacardeaceae, !is.na(anacardeaceae$year)) #There are 40,125 records with year
+schinus <- subset(schinus, !is.na(schinus$year)) #5,956 records 
+tracheophyta <- subset(tracheophyta, !is.na(tracheophyta$year)) #365,757
+
+
+
+
 #Anacardiaceae with coordinates: 
 anacardeaceae_coords <- anacardeaceae[!is.na(anacardeaceae$decimalLongitude), ]
 anacardeaceae_coords <- anacardeaceae_coords[!is.na(anacardeaceae_coords$decimalLatitude), ]
-#There are 33,965 US Anacardeaceae records with coordinates 
+#There are 32,369 US Anacardeaceae records with coordinates 
+
+
+
 #Anacardiaceae without coordinates: 
 anacardeaceae_nocoords <- anacardeaceae[is.na(anacardeaceae$decimalLongitude) | is.na(anacardeaceae$decimalLatitude), ]
 #To restrict to Florida, have to clean up the stateProvince codes first: 
 anacardeaceae_nocoords$stateProvince <- gsub(anacardeaceae_nocoords$stateProvince, pattern='Miami, Florida', replacement='Florida')
 anacardeaceae_nocoords$stateProvince <- gsub(anacardeaceae_nocoords$stateProvince, pattern='Flórida', replacement='Florida')
 anacardeaceae_nocoords <- anacardeaceae_nocoords[anacardeaceae_nocoords$stateProvince =="Florida", ]
-#There are 969 FL Anacardeaceae records without coordinates 
+
+#Then clean up counties:
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='(', replacement='', fixed=T)
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern=')', replacement='', fixed=T)
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern=' County', replacement='')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='County of ', replacement='')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern=' Cty.', replacement='')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern=' Cty', replacement='')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern=' Co.', replacement='')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='Ste ', replacement='Saint ')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='St. ', replacement='Saint ')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='Miami-Dade', replacement='Miami')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='Dade', replacement='Miami-Dade')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='Miami', replacement='Miami-Dade')
+anacardeaceae_nocoords$county <- gsub(anacardeaceae_nocoords$county, pattern='Miami-Dade-Dade', replacement='Miami-Dade')
+
+anacardeaceae_nocoords <- subset(anacardeaceae_nocoords, anacardeaceae_nocoords$county !="")
+
+#There are 919 FL Anacardeaceae records without coordinates 
 
 
 #Schinus with coordinates: 
 schinus_coords <- schinus[!is.na(schinus$decimalLongitude), ]
 schinus_coords <- schinus_coords[!is.na(schinus$decimalLatitude), ]
-# There are 4,567 Schinus observations with coordinates 
+# There are 3,979 Schinus observations with coordinates 
+
+
 #Schinus without coordinates:
 schinus_nocoords <- schinus[is.na(schinus$decimalLongitude)| is.na(schinus$decimalLatitude), ]
-#There are 2673 Schinus observations with no coordinates 
-#Restrict to US: 
-schinus_nocoords <-schinus_nocoords[schinus_nocoords$countryCode =="US", ]
-#There are 396 US Schinus records with no coordinates  
-#Restrict to Florida: 
+#There are 1977 Schinus observations with no coordinates 
+
+
+schinus_nocoords$stateProvince <- gsub(schinus_nocoords$stateProvince, pattern='Miami, Florida', replacement='Florida')
+schinus_nocoords$stateProvince <- gsub(schinus_nocoords$stateProvince, pattern='Flórida', replacement='Florida')
 schinus_nocoords <- schinus_nocoords[schinus_nocoords$stateProvince =="Florida", ]
-#There are 281 Florida Schinus records with no coordinates 
-#Remove those records without a county
-schinus_nocoords <- schinus_nocoords[!is.na(schinus_nocoords$county) & schinus_nocoords$county!="", ]
-#There are 268 Florida Schinus records with no coordinates but with a county listed 
 
+#Then clean up counties:
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='(', replacement='', fixed=T)
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=')', replacement='', fixed=T)
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' County', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='County of ', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' Cty.', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' Cty', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' Co.', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Ste ', replacement='Saint ')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='St. ', replacement='Saint ')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Miami-Dade', replacement='Miami')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Dade', replacement='Miami-Dade')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Miami', replacement='Miami-Dade')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Miami-Dade-Dade', replacement='Miami-Dade')
 
+schinus_nocoords <- subset(schinus_nocoords, schinus_nocoords$county !="")
+#There are 266 records without coordinates 
 
 #Divide into year bins
 schinus_coords_years<-schinus_coords[!is.na(schinus_coords$year), ]
 schinus_nocoords_years <- schinus_nocoords[!is.na(schinus_nocoords$year), ]
-#There are 2565 + 266 records with years (not all are in FL necessarily)
+#There are 2715 + 266 records with years (not all are in FL necessarily)
 anacardeaceae_coords_years <- anacardeaceae_coords[!is.na(anacardeaceae_coords$year), ]
 anacardeaceae_nocoords_years <- anacardeaceae_nocoords[!is.na(anacardeaceae_nocoords$year), ]
 years<-c(schinus_coords_years$year, schinus_nocoords_years$year)
@@ -75,7 +121,7 @@ years<-c(schinus_coords_years$year, schinus_nocoords_years$year)
 #(1890, 1900]
 
 
-
+schinus_coords_years_FL <- subset(schinus_coords_years, schinus_coords_years$stateProvince == "Florida")
 categories <- seq(1880, 2020, by=10)
 schinus_coords_1880 <- schinus_coords_years[schinus_coords_years$year<1880, ]
 schinus_coords_1890 <- schinus_coords_years[schinus_coords_years$year<1890, ]
@@ -112,6 +158,26 @@ schinus_XY_2020<-SpatialPoints(cbind(schinus_coords_2020$decimalLongitude, schin
 schinus_XY_df <- list(schinus_XY_1880, schinus_XY_1890, schinus_XY_1900, schinus_XY_1910, schinus_XY_1920,
                       schinus_XY_1930, schinus_XY_1940, schinus_XY_1950, schinus_XY_1960, schinus_XY_1970, 
                       schinus_XY_1980, schinus_XY_1990, schinus_XY_2000, schinus_XY_2010, schinus_XY_2020)
+
+
+#In order to make use of records without coordinates they need to have stateProvince==Florida
+# ensure county names match GADM
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='(', replacement='', fixed=T)
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=')', replacement='', fixed=T)
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' County', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='County of ', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' Cty.', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' Cty', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern=' Co.', replacement='')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Ste ', replacement='Saint ')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='St. ', replacement='Saint ')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Miami-Dade', replacement='Miami')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Dade', replacement='Miami-Dade')
+schinus_nocoords$county <- gsub(schinus_nocoords$county, pattern='Miami', replacement='Miami-Dade')
+
+#now select only those that are in florida
+schinus_nocoords <- subset(schinus_nocoords, schinus_nocoords$stateProvince == "Florida")
+schinus_nocoords_years <- subset(schinus_nocoords, !is.na(schinus_nocoords$year))
 
 
 schinus_nocoords_1880 <- schinus_nocoords_years[schinus_nocoords_years$year<1880, ]
@@ -165,6 +231,9 @@ anacard_XY_2020<-SpatialPoints(cbind(anacardeaceae_coords_2020$decimalLongitude,
 anacard_XY_df <- list(anacard_XY_1880,anacard_XY_1890, anacard_XY_1900, anacard_XY_1910, anacard_XY_1920, 
                       anacard_XY_1930, anacard_XY_1940, anacard_XY_1950, anacard_XY_1960, anacard_XY_1970,
                       anacard_XY_1980, anacard_XY_1990, anacard_XY_2000, anacard_XY_2010, anacard_XY_2020)
+
+
+
 
 
 anacardeaceae_nocoords_1880 <- anacardeaceae_nocoords_years[anacardeaceae_nocoords_years$year<1880, ] #no anacards
@@ -230,6 +299,9 @@ florida_1990 <- florida
 florida_2000 <- florida
 florida_2010 <- florida
 florida_2020 <- florida 
+
+
+
 
 florida_df <- list(florida_1880, florida_1890, florida_1900, florida_1910, florida_1920, florida_1930, 
                    florida_1940, florida_1950, florida_1960, florida_1970, florida_1980, florida_1990,
@@ -301,7 +373,7 @@ for (i in 1:15) {
 }
 
 #Prior to running the above script (so only including occurences with coordinates, the total number of Anacards
-# is 1024 ) Afterwards it is 4545 
+# is 1023 ) Afterwards it is 5431 
 sum(florida_df[[1]]$numAnacard,florida_df[[2]]$numAnacard, florida_df[[3]]$numAnacard,florida_df[[4]]$numAnacard,
     florida_df[[5]]$numAnacard, florida_df[[6]]$numAnacard, florida_df[[7]]$numAnacard, florida_df[[8]]$numAnacard,
     florida_df[[9]]$numAnacard, florida_df[[10]]$numAnacard, florida_df[[11]]$numAnacard, florida_df[[12]]$numAnacard,
@@ -344,6 +416,14 @@ sum(florida_df[[1]]$numSchinus,florida_df[[2]]$numSchinus, florida_df[[3]]$numSc
     florida_df[[13]]$numSchinus, florida_df[[14]]$numSchinus, florida_df[[15]]$numSchinus)
 
 
+#Because of problem with bayesLopod dropping dataframe if there is only one 
+# county without detections, arbitrarily force Escambia (the furthest West county)
+# to have 0 effort (it already has zero detections)
+florida_df[[15]]@data$numAnacard[16]<-0
+
+#Prior to running this script, there are 230 records with coordinates.
+
+#Including the number of records with no coordinates, there are 1444? 
 
 
 #### Use these objects in BayesLopod 
@@ -393,12 +473,15 @@ ld_Shape_2010 = shapeLopodData( Shapefile = florida_df[[14]],
                                 fieldY = "numSchinus",  
                                 Adjacency = T,
                                 keepFields = F)
+
 ld_Shape_2020 = shapeLopodData( Shapefile = florida_df[[15]],
                                 fieldN = "numAnacard",
                                 fieldY = "numSchinus",  
                                 Adjacency = T,
                                 keepFields = F)
-lsd_Shape_df <- list(ld_Shape_1930, ld_Shape_1940, ld_Shape_1950, ld_Shape_1960, ld_Shape_1970, ld_Shape_1980,
+
+
+ld_Shape_df <- list(ld_Shape_1930, ld_Shape_1940, ld_Shape_1950, ld_Shape_1960, ld_Shape_1970, ld_Shape_1980,
                      ld_Shape_1990, ld_Shape_2000, ld_Shape_2010, ld_Shape_2020)
 
 for (i in 1:10) {
@@ -407,6 +490,8 @@ schinusDetect_1930 = spplot(florida_df[[6]], zcol = c("numSchinus"), main = "Det
 plot(schinusSEff_1930, split = c(1,1,2,1), xlab="1930", more = T, border=NA)
 plot(schinusDetect_1930,  split = c(2,1,2,1), more = F, border=NA)
 }
+
+
 x11()
 par(mfrow=c(1, 2))
 spplot(florida_df[[6]], zcol=c("numAnacard"), main="Sampling Effort", border=NA, more=T)
@@ -487,11 +572,15 @@ mLopodShape_1970 = modelLopod(LopodData = ld_Shape_1970,
                               q = NULL, 
                               pmin = 0,
                               CAR = T, 
-                              nChains = 4, 
-                              warmup = 500, 
+                              nChains = 3, 
+                              warmup = 2000, 
                               sampling = 1000, 
                               nCores =4)
 lopodTrace(mLopodShape_1970, inc_warmup=T)
+sampler_params <- get_sampler_params(mLopodShape_1970@StanFit, inc_warmup=FALSE)
+divergent<-sapply(sampler_params, function(x) sum(x[, "divergent__"]))
+print(divergent)
+#no divergent transitions
 
 mLopodShape_1980 = modelLopod(LopodData = ld_Shape_1980,
                               varP = T, 
@@ -503,6 +592,12 @@ mLopodShape_1980 = modelLopod(LopodData = ld_Shape_1980,
                               sampling = 1000, 
                               nCores =3)
 lopodTrace(mLopodShape_1980, inc_warmup=T)
+sampler_params <- get_sampler_params(mLopodShape_1980@StanFit, inc_warmup=FALSE)
+divergent<-sapply(sampler_params, function(x) sum(x[, "divergent__"]))
+print(divergent)
+#no divergent transitions
+
+
 
 mLopodShape_1990 = modelLopod(LopodData = ld_Shape_1990,
                               varP = T, 
@@ -510,21 +605,31 @@ mLopodShape_1990 = modelLopod(LopodData = ld_Shape_1990,
                               pmin = 0, 
                               CAR = T, 
                               nChains = 3, 
-                              warmup = 500, 
-                              sampling = 1000, 
+                              warmup = 4000, 
+                              sampling = 2000, 
                               nCores =3)
 lopodTrace(mLopodShape_1990, inc_warmup=T)
+sampler_params <- get_sampler_params(mLopodShape_1990@StanFit, inc_warmup=FALSE)
+divergent<-sapply(sampler_params, function(x) sum(x[, "divergent__"]))
+print(divergent)
+#no divergent transitions
+
 
 mLopodShape_2000 = modelLopod(LopodData = ld_Shape_2000,
-                              varP = T, 
-                              q = NULL, 
-                              pmin = 0, 
-                              CAR = T, 
-                              nChains = 3, 
-                              warmup = 500, 
-                              sampling = 1000, 
-                              nCores =3)
+                               varP = T, 
+                               q = NULL, 
+                               pmin = 0, 
+                               CAR = T, 
+                               nChains = 3, 
+                               warmup = 2000, 
+                               sampling = 2000,
+                               nCores =3)
 lopodTrace(mLopodShape_2000, inc_warmup=T)
+#There were 10 divergent transitions after warmup
+
+sampler_params <- get_sampler_params(mLopodShape_2000@StanFit, inc_warmup=FALSE)
+divergent<-sapply(sampler_params, function(x) sum(x[, "divergent__"]))
+print(divergent)
 
 mLopodShape_2010 = modelLopod(LopodData = ld_Shape_2010,
                               varP = T, 
@@ -536,21 +641,52 @@ mLopodShape_2010 = modelLopod(LopodData = ld_Shape_2010,
                               sampling = 1000, 
                               nCores =3)
 lopodTrace(mLopodShape_2010, inc_warmup=T)
+sampler_params <- get_sampler_params(mLopodShape_2010@StanFit, inc_warmup=FALSE)
+divergent<-sapply(sampler_params, function(x) sum(x[, "divergent__"]))
+print(divergent)
+#No divergent transitions
 
-#Have the same issue that I ran into before...
+
+#Have the same issue that I ran into before...so forced sampling effort in 
+# Escambia county to be zero 
 mLopodShape_2020 = modelLopod(LopodData = ld_Shape_2020,
                               varP = T, 
                               q = NULL, 
                               pmin = 0, 
                               CAR = T, 
                               nChains = 3, 
-                              warmup = 500, 
+                              warmup = 1000, 
                               sampling = 1000, 
                               nCores =3)
-lopodTrace(mLopodShape_1980, inc_warmup=T)
+lopodTrace(mLopodShape_2020, inc_warmup=T)
+sampler_params <- get_sampler_params(mLopodShape_2020@StanFit, inc_warmup=FALSE)
+divergent<-sapply(sampler_params, function(x) sum(x[, "divergent__"]))
+print(divergent)
+#No divergent transitions
+
+
 
 #####
 lopodDens(mLopodShape_1970, c("q", "pmin", "pmax"))
+
+
+q_1970 <- stan_dens(mLopodShape_1970@StanFit, pars="q")
+q_1970 <- q_1970 + ggtitle("q: 1970\n") + xlim(0, 0.3)
+q_1980 <- stan_dens(mLopodShape_1980@StanFit, pars="q")
+q_1980 <- q_1980 + ggtitle("q: 1980\n") + xlim(0, 0.3)
+q_1990 <- stan_dens(mLopodShape_1990@StanFit, pars="q") 
+q_1990 <- q_1990 + ggtitle("q: 1990\n")+ xlim(0,0.3)
+q_2000 <- stan_dens(mLopodShape_2000@StanFit, pars="q")
+q_2000 <- q_2000 + ggtitle("q: 2000\n") + xlim(0,0.3)
+q_2010 <- stan_dens(mLopodShape_2010@StanFit, pars="q")
+q_2010 <- q_2010 + ggtitle("q: 2010\n") + xlim(0,0.3)
+q_2020 <- stan_dens(mLopodShape_2020@StanFit, pars="q")
+q_2020 <- q_2020 + ggtitle("q: 2020\n") + xlim(0, 0.3)
+
+grid.arrange(q_1970, q_1980, q_1990, q_2000, q_2010, q_2020, ncol=1)
+
+grid.arrange(q_1970, psiShape_1970)
+
 
 
 
@@ -653,3 +789,177 @@ list.files(path = "./", pattern = "*.png", full.names = T) %>%
   image_join() %>% # joins image
   image_animate(fps=2) %>% # animates, can opt for number of loops
   image_write(fileName) # write to current dir
+
+####
+
+at=seq(0, 1, by=0.1)
+
+psi_1970 <- spplot(SchinusShape_1970, zcol = c("psi_50"), main="1970: Psi (median)", at=at)
+psi_1980 <- spplot(SchinusShape_1980, zcol = c("psi_50"), main="1980: Psi (median)", at=at)
+psi_1990 <- spplot(SchinusShape_1990, zcol = c("psi_50"), main="1990: Psi (median)", at=at)
+psi_2000 <- spplot(SchinusShape_2000, zcol = c("psi_50"), main="2000: Psi (median)", at=at)
+psi_2010 <- spplot(SchinusShape_2010, zcol = c("psi_50"), main="2010: Psi (median)", at=at)
+psi_2020 <- spplot(SchinusShape_2020, zcol = c("psi_50"), main="2020: Psi (median)", at=at)
+
+setwd("./Schinus_occupancy")
+png("1970.png")
+psi_1970
+dev.off()
+png("1980.png")
+psi_1980
+dev.off()
+png("1990.png")
+psi_1990
+dev.off()
+png("2000.png")
+psi_2000
+dev.off()
+png("2010.png")
+psi_2010
+dev.off()
+png("2020.png")
+psi_2020
+dev.off()
+
+fileName<-"Schinus_occupancy.gif"
+#Use the purr and magick packages to combine the png files into a GIF
+# This part of the code comes from a post by Ryan Peek on how to make GIF 
+# files in R: https://ryanpeek.github.io/2016-10-19-animated-gif_maps_in_R/ 
+list.files(path = "./", pattern = "*.png", full.names = T) %>% 
+  map(image_read) %>% # reads each path file
+  image_join() %>% # joins image
+  image_animate(fps=2) %>% # animates, can opt for number of loops
+  image_write(fileName) # write to current dir
+
+####
+
+
+
+grid.arrange(q_1970, psi_1970, 
+             q_1980, psi_1980, 
+             q_1990, psi_1990, 
+             q_2000, psi_2000,
+             q_2010, psi_2010,
+             q_2020, psi_2020, layout_matrix=lay)
+
+lay <- rbind (c(1, 2, 2),
+              c(3, 4, 4), 
+              c(5, 6, 6), 
+              c(7, 8, 8), 
+              c(9, 10, 10),
+              c(11, 12, 12))
+
+grid.arrange(psi_1970, psi_1980, psi_1990, psi_2000, psi_2010, psi_2020)
+
+
+schinusSeff_1970 <- spplot(florida_df[[10]], zcol = c("numAnacard"), main ="Sampling Effort: 1970", border=NA)
+schinusDetect_1970 <- spplot(florida_df[[10]], zcol = c("numSchinus"), main ="Detections: 1970", border=NA)
+plot(schinusSeff_1970, split=c(1, 1, 2, 1), xlab="1970", more=T, border=NA)
+plot(schinusDetect)
+
+at=seq(0, 400, by =50)
+
+at=c(0, 10, 100, 200, 300, 400)
+
+my.palette_grn <- brewer.pal(n = 7, name = "YlGn")
+my.palette_org <- brewer.pal(n=7, name="OrRd")
+breaks.qt <- classIntervals(florida_df[[15]]$numAnacard, n = 6, style= "quantile", intervalClosure="right")
+
+setwd("C:/Users/kerickson/Documents/GitHub/invasion_dynamics/Detections")
+
+png("1970.png")
+schinusSEff_1970 = spplot(florida_df[[10]], zcol = c("numAnacard"), main = "Sampling Effort-1970", border=NA, at = breaks.qt$brks,  col.regions=my.palette_grn)
+schinusDetect_1970 = spplot(florida_df[[10]], zcol = c("numSchinus"), main = "Detections-1970", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+plot(schinusSEff_1970, split = c(1,1,2,1), xlab="1970", more = T, border=NA)
+plot(schinusDetect_1970,  split = c(2,1,2,1), more = F, border=NA)
+dev.off()
+
+png("1980.png")
+schinusSEff_1980 = spplot(florida_df[[11]], zcol = c("numAnacard"), main = "Sampling Effort-1980", border=NA, at = breaks.qt$brks,  col.regions=my.palette_grn)
+schinusDetect_1980 = spplot(florida_df[[11]], zcol = c("numSchinus"), main = "Detections-1980", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+plot(schinusSEff_1980, split = c(1,1,2,1), xlab="1980", more = T, border=NA)
+plot(schinusDetect_1980,  split = c(2,1,2,1), more = F, border=NA)
+dev.off()
+
+png("1990.png")
+schinusSEff_1990 = spplot(florida_df[[12]], zcol = c("numAnacard"), main = "Sampling Effort-1990", border=NA, at = breaks.qt$brks,  col.regions=my.palette_grn)
+schinusDetect_1990 = spplot(florida_df[[12]], zcol = c("numSchinus"), main = "Detections-1990", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+plot(schinusSEff_1990, split = c(1,1,2,1), xlab="1990", more = T, border=NA)
+plot(schinusDetect_1990,  split = c(2,1,2,1), more = F, border=NA)
+dev.off()
+
+png("2000.png")
+schinusSEff_2000 = spplot(florida_df[[13]], zcol = c("numAnacard"), main = "Sampling Effort-2000", border=NA, at = breaks.qt$brks,  col.regions=my.palette_grn)
+schinusDetect_2000 = spplot(florida_df[[13]], zcol = c("numSchinus"), main = "Detections-2000", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+plot(schinusSEff_2000, split = c(1,1,2,1), xlab="2000", more = T, border=NA)
+plot(schinusDetect_2000,  split = c(2,1,2,1), more = F, border=NA)
+dev.off()
+
+png("2010.png")
+schinusSEff_2010 = spplot(florida_df[[14]], zcol = c("numAnacard"), main = "Sampling Effort-2010", border=NA, at = breaks.qt$brks,  col.regions=my.palette_grn)
+schinusDetect_2010 = spplot(florida_df[[14]], zcol = c("numSchinus"), main = "Detections-2010", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+plot(schinusSEff_2010, split = c(1,1,2,1), xlab="2010", more = T, border=NA)
+plot(schinusDetect_2010,  split = c(2,1,2,1), more = F, border=NA)
+dev.off()
+
+png("2020.png")
+schinusSEff_2020 = spplot(florida_df[[15]], zcol = c("numAnacard"), main = "Sampling Effort-2020", border=NA, at = breaks.qt$brks,  col.regions=my.palette_grn)
+schinusDetect_2020 = spplot(florida_df[[15]], zcol = c("numSchinus"), main = "Detections-2020", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+plot(schinusSEff_2020, split = c(1,1,2,1), xlab="2020", more = T, border=NA)
+plot(schinusDetect_2020,  split = c(2,1,2,1), more = F, border=NA)
+dev.off()
+
+fileName<-"Schinus_detections.gif"
+#Use the purr and magick packages to combine the png files into a GIF
+# This part of the code comes from a post by Ryan Peek on how to make GIF 
+# files in R: https://ryanpeek.github.io/2016-10-19-animated-gif_maps_in_R/ 
+list.files(path = "./", pattern = "*.png", full.names = T) %>% 
+  map(image_read) %>% # reads each path file
+  image_join() %>% # joins image
+  image_animate(fps=2) %>% # animates, can opt for number of loops
+  image_write(fileName) # write to current dir
+
+####
+
+
+
+
+
+
+
+
+grid.arrange(psi_1970, schinusSEff_1970, schinusDetect_1970)
+
+
+points.layer_1970 <- list("sp.points", schinus_XY_1970, col="red", cex=2, pch=16)
+records_coords_1970 = spplot(florida_df[[10]], zcol=c("ID_0"), sp.layout = points.layer_1970, colorkey=F, main="1970: records with coords")
+
+
+grid.arrange(psi_1970, schinusSEff_1970, schinusDetect_1970, records_coords_1970)
+
+schinusSEff_1970 = spplot(florida_df[[10]], zcol = c("numAnacard"), main = "Sampling Effort- 1970", border=NA, at = breaks.qt$brks,  col.regions=my.palette_grn)
+schinusSEff_1980 = spplot(florida_df[[11]], zcol = c("numAnacard"), main = "Sampling Effort- 1980", border=NA, at = breaks.qt$brks, col.regions=my.palette_grn)
+schinusSEff_1990 = spplot(florida_df[[12]], zcol = c("numAnacard"), main = "Sampling Effort- 1990", border=NA, at = breaks.qt$brks, col.regions=my.palette_grn)
+schinusSEff_2000 = spplot(florida_df[[13]], zcol = c("numAnacard"), main = "Sampling Effort- 2000", border=NA, at = breaks.qt$brks, col.regions=my.palette_grn)
+schinusSEff_2010 = spplot(florida_df[[14]], zcol = c("numAnacard"), main = "Sampling Effort- 2010", border=NA, at = breaks.qt$brks, col.regions=my.palette_grn)
+schinusSEff_2020 = spplot(florida_df[[15]], zcol = c("numAnacard"), main = "Sampling Effort- 2020", border=NA, at = breaks.qt$brks, col.regions=my.palette_grn)
+
+schinusDetect_1970 = spplot(florida_df[[10]], zcol = c("numSchinus"), main = "Detections-1970", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+schinusDetect_1980 = spplot(florida_df[[11]], zcol = c("numSchinus"), main = "Detections-1980", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+schinusDetect_1990 = spplot(florida_df[[12]], zcol = c("numSchinus"), main = "Detections-1990", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+schinusDetect_2000 = spplot(florida_df[[13]], zcol = c("numSchinus"), main = "Detections-2000", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+schinusDetect_2010 = spplot(florida_df[[14]], zcol = c("numSchinus"), main = "Detections-2010", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+schinusDetect_2020 = spplot(florida_df[[15]], zcol = c("numSchinus"), main = "Detections-2020", border=NA, at=breaks.qt$brks, col.regions = my.palette_org)
+
+
+grid.arrange(psi_1970, schinusSEff_1970, schinusDetect_1970,
+             psi_1980, schinusSEff_1980, schinusDetect_1980,
+             psi_1990, schinusSEff_1990, schinusDetect_1990,
+             psi_2000, schinusSEff_2000, schinusDetect_2000,
+             psi_2010, schinusSEff_2010, schinusDetect_2010,
+             psi_2020, schinusSEff_2020, schinusDetect_2010, ncol=6)
+
+
+
+
+schinusDetect_1970_coords <- spplot(florida_df[[10]], zcol=c("numSchinus"), main = "Detections-1970", border=NA, at=breaks.qt$brks, col="transparent", col.regions = my.palette_org, sp.layout=points.layer_1970)
