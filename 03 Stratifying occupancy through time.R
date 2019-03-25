@@ -605,7 +605,17 @@ mLopodShape_1990 = modelLopod(LopodData = ld_Shape_1990,
                               pmin = 0, 
                               CAR = T, 
                               nChains = 3, 
-                              warmup = 4000, 
+                              warmup = 1000, 
+                              sampling = 2000, 
+                              nCores =3)
+
+mLopodShape_1990_NoCAR = modelLopod(LopodData = ld_Shape_1990,
+                              varP = T, 
+                              q = NULL, 
+                              pmin = 0, 
+                              CAR = F, 
+                              nChains = 3, 
+                              warmup = 1000, 
                               sampling = 2000, 
                               nCores =3)
 lopodTrace(mLopodShape_1990, inc_warmup=T)
@@ -614,7 +624,34 @@ divergent<-sapply(sampler_params, function(x) sum(x[, "divergent__"]))
 print(divergent)
 #no divergent transitions
 
+library("bayesplot")
+#library("rstanarm")
+library("ggplot2")
 
+psiList <- NULL
+for(i in 1:67) {
+  temp <- paste0("psi_i[", i,"]")
+  psiList <- c(psiList, temp)
+}
+psiList2 <- NULL
+for(i in 1:67) {
+
+  temp <- paste0("psi_Sampled[", i, "]")
+  psiList2 <- c(psiList2, temp)
+}
+posterior <- as.matrix(mLopodShape_1990@StanFit)
+posteriorNoCAR <- as.matrix(mLopodShape_1990_NoCAR@StanFit)
+plot_title <- ggtitle("Posterior distributions for 1990",
+ 
+                      
+                                                                "with medians")
+mcmc_areas(posterior,
+                        pars = psiList[1:10],
+                         prob = 1) + plot_title
+
+mcmc_areas(posteriorNoCAR, pars = psiList2[1:10], prob = 1) + plot_title
+mcmc_intervals(posterior, pars=psiList)
+mcmc_areas(posterior, pars=psiList[1:10]) + plot_title
 mLopodShape_2000 = modelLopod(LopodData = ld_Shape_2000,
                                varP = T, 
                                q = NULL, 
@@ -963,3 +1000,32 @@ grid.arrange(psi_1970, schinusSEff_1970, schinusDetect_1970,
 
 
 schinusDetect_1970_coords <- spplot(florida_df[[10]], zcol=c("numSchinus"), main = "Detections-1970", border=NA, at=breaks.qt$brks, col="transparent", col.regions = my.palette_org, sp.layout=points.layer_1970)
+
+
+
+
+###Look at detections
+SchinusShape_2020_detection = mLopodShape_2020@LopodData@geoDataObject
+pShape_2020 = lopodShape(mLopodShape_2020, "pp", extrapolate = F,  quant = 0.05)
+SchinusShape_2020_detection@data[,"pp_05"] = pShape_2020@data[,"pp"]
+
+pShape_2020 = lopodShape(mLopodShape_2020, "pp", extrapolate = F,  quant = 0.5)
+SchinusShape_2020_detection@data[,"pp_50"] = pShape_2020@data[,"pp"]
+
+pShape_2020 = lopodShape(mLopodShape_2020, "pp", extrapolate = F,  quant = 0.95)
+SchinusShape_2020_detection@data[,"pp_95"] = pShape_2020@data[,"pp"]
+spplot( SchinusShape_2020_detection,
+        zcol = c("pp_05", "pp_50", "pp_95"),
+        names.attr = c("PP (5% quantile)", "PP (median)", "PP (95% quantile)"), main = "PP:2020")
+dev.off()
+
+
+#by recordedBy
+collectors <- levels(factor(schinus_FL$recordedBy))
+
+collector_matrix <- array(data=NA, dim=length(collectors) )
+for (i in 1:length(collectors)) {
+  collector_matrix[i] <- subset(schinus_FL, schinus_FL$recordedBy==collectors[i])
+}
+Bishop <- subset(schinus_FL, schinus_FL$recordedBy=="A. Bishop")
+Robbins <- subset(schinus_FL, schinus_FL$recordedBy=="A. P. Robbins")
